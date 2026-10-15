@@ -2,7 +2,9 @@
 
 An agent that paints race cars. Give it a brief; it designs a livery, fits it to
 the car's real 3D model, and revises until the fitment check passes. Every call it
-makes is traced, and a person accepts or discards what it proposes.
+makes is traced, and a person accepts or discards what it proposes. Recorded
+runs are at [mishan.github.io/autolivery](https://mishan.github.io/autolivery/),
+published from `demo/`.
 
 The fitment check is the part it cannot talk its way past. It measures in
 millimeters and visible fractions against the car's actual UV geometry, not by

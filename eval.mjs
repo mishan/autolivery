@@ -5,7 +5,7 @@
  * Every case is a set of renders from a real run, the brief, and a person's
  * verdict on them (see cases.mjs). With the local critic it costs nothing, so a
  * change to the critic's prompt is tried against every past mistake before a
- * paid run discovers a new one. The renders live in autolivery/runs/, which is
+ * paid run discovers a new one. The renders live in runs/, which is
  * not committed; a case whose pictures are not on this machine is skipped and
  * said to be, and a run that judged no case at all fails.
  */
@@ -18,11 +18,11 @@ import { createTrace } from './trace.mjs';
 import { score, checkPatterns, overruleCase } from './cases.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, '..');
+const ROOT = HERE;
 
-const USAGE = `usage: node autolivery/eval.mjs [options]
+const USAGE = `usage: node eval.mjs [options]
 
-  --cases <file>         the cases (default autolivery/critic-cases.json)
+  --cases <file>         the cases (default critic-cases.json)
   --only <id,id>         just these cases
   --critic-backend <b>   openai (default: the local server, free) or anthropic
   --critic-base-url <u>  default http://127.0.0.1:8081/v1

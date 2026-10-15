@@ -1,0 +1,9 @@
+node_modules/
+keys.env
+
+# What a run leaves behind: renders, the trace, the result.
+runs/
+
+# Personal working notes.
+HANDOFF.md
+hackathon/notes/

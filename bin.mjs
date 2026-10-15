@@ -9,17 +9,17 @@ import { loadRecording, createReplayPlanner, designDigest, checkBase } from './r
 import { plannerSystem } from './prompts.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const LIVERYKIT = resolve(HERE, '../bin/liverykit.mjs');
+const LIVERYKIT = fileURLToPath(new URL('bin/liverykit.mjs', import.meta.resolve('liverykit/package.json')));
 
 const USAGE = `autolivery — give it a brief; it designs a livery, fits it to the car's real
 model, and revises until the fitment check and a critic both pass. The result
 goes to the editor's inbox, where a person accepts or discards it.
 
-  node autolivery/bin.mjs "<brief>" [options]
+  node bin.mjs "<brief>" [options]
 
 It attaches to a running editor through liverykit's MCP server, so start one:
 
-  node bin/liverykit.mjs autolivery-nsx --ui
+  npx liverykit liveries/autolivery-nsx.json --ui
 
 The loop:
   --editor <url>         the editor (default http://127.0.0.1:7391/)
@@ -37,7 +37,7 @@ The loop:
   --propose <run dir>    no loop: send that run's passing draft to the editor's inbox
                          again, with why it passed. For a pass the inbox refused;
                          only onto the working design that run started from
-  --out <dir>            renders, trace and result.json (default autolivery/runs/<time>)
+  --out <dir>            renders, trace and result.json (default runs/<time>)
   --no-propose           keep the passing design out of the editor's inbox
   --polish <n>           rounds after a pass spent acting on the critic's advice, when it
                          gave any (default 1). The pass is kept, and offered instead of a

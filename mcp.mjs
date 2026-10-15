@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { EDITOR_META } from '../src/mcp/client.mjs';
+import { EDITOR_META } from 'liverykit/src/mcp/client.mjs';
 
 /**
  * An MCP client over stdio: the other half of `liverykit --mcp`.

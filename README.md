@@ -9,7 +9,7 @@ millimeters and visible fractions against the car's actual UV geometry, not by
 judging a picture, and the harness runs it rather than the agent reporting on
 itself.
 
-liverykit is the toolkit this drives, and most of it predates this directory: the
+[liverykit](https://github.com/mishan/liverykit) is the toolkit this drives, and most of it predates this repository: the
 kn5 reader, profiles, treatments, the editor, the MCP server, `check_fitment` and
 `render_car`. What is new here is the loop, the critic, the tracing, and the one
 capability the MCP server lacked: measuring a draft without proposing it.
@@ -17,13 +17,12 @@ capability the MCP server lacked: measuring a draft without proposing it.
 ## Running it
 
 ```sh
-npm install                              # liverykit, from the repository root
-(cd autolivery && npm install)           # the agent's one dependency, the Anthropic SDK
+npm install                              # liverykit and the Anthropic SDK
 export ANTHROPIC_API_KEY=...
 export AGENTOPS_API_KEY=...              # optional
 
-node bin/liverykit.mjs autolivery-nsx --ui          # the editor, in another terminal
-node autolivery/bin.mjs "Gulf-style, number 85, Neon Doll Racing, number readable from trackside. \
+npx liverykit liveries/autolivery-nsx.json --ui     # the editor, in another terminal
+node bin.mjs "Gulf-style, number 85, Neon Doll Racing, number readable from trackside. \
 Use a white roundel with the number inside it, whole and fully visible, clear of every edge. \
 An orange centre stripe runs the full length of the car, nose to tail, continuing over the rear wing." \
   --critic-model claude-sonnet-5 --critic-effort low --max-cost 3
@@ -42,10 +41,10 @@ at low effort it agreed just as often again, in about 10 s a picture instead of
 `autolivery-nsx` is the Honda NSX GT3 Evo in gray primer and nothing else. The
 editor needs the car's own `.kn5` for the 3D views, and so does the loop, because
 every measurement and render is taken from the model — see the main README on
-[supplying the game's files](../README.md#you-supply-the-games-files).
+[supplying the game's files](https://github.com/mishan/liverykit#you-supply-the-games-files).
 
 Each round prints its tool calls and the gate's verdict. Renders, `trace.jsonl`
-and `result.json` go to `autolivery/runs/<time>/`, and so does `index.html`: every
+and `result.json` go to `runs/<time>/`, and so does `index.html`: every
 round as it lands, newest first, with the picture the gate judged and why it
 passed or failed. It reloads itself until the run ends; open it beside the editor
 to watch the drafts the inbox never sees. `--help` lists the options:
@@ -76,7 +75,7 @@ llama-server -m qwen3-vl-30b-a3b-instruct-q8_0.gguf \
   -ngl 999 -sm layer -c 65536 -np 1 -fa on -ctk q8_0 -ctv q8_0 \
   --load-mode none --host 127.0.0.1 --port 8081
 
-node autolivery/bin.mjs "..." --backend openai --base-url http://127.0.0.1:8081/v1
+node bin.mjs "..." --backend openai --base-url http://127.0.0.1:8081/v1
 ```
 
 On two 7900-class cards that loads in seconds and generates at about 50 tokens
@@ -191,9 +190,9 @@ takes no brief and no planner model, and it proposes nothing. A run records each
 round's draft and summary in `result.json`. One from before that replays its final
 draft as one round.
 
-    node autolivery/bin.mjs --replay autolivery/runs/<run> --critic-base-url http://127.0.0.1:8081/v1
+    node bin.mjs --replay runs/<run> --critic-base-url http://127.0.0.1:8081/v1
 
-`node autolivery/eval.mjs` scores a critic against `critic-cases.json`: renders from
+`node eval.mjs` scores a critic against `critic-cases.json`: renders from
 real runs, each with a verdict a person gave or checked by eye. It runs the local
 critic by default, so a prompt change is tried against every past mistake before a
 paid run finds a new one. The renders stay in `runs/`, which is not committed, so a
@@ -220,9 +219,9 @@ agreed to. Measuring a draft needed only that the editor learn to answer questio
 about one, and every MCP client now gets that ability. So the demo and production
 run the same code, and there is no flag to forget.
 
-What the agent cannot do is enforced by the MCP server, not by this directory. It
+What the agent cannot do is enforced by the MCP server, not by this repository. It
 cannot save, write files, confirm a binding, or send a proposal the editor would
-refuse. See [docs/mcp.md](../docs/mcp.md).
+refuse. See [docs/mcp.md](https://github.com/mishan/liverykit/blob/main/docs/mcp.md).
 
 ## The loop doesn't know it's a car
 

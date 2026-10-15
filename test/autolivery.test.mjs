@@ -4,23 +4,25 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { startUi } from '../src/ui/server.mjs';
-import { profileFromKn5 } from '../src/engine/profilegen.mjs';
-import { carKn5, vert, CAR } from './fixtures/kn5.mjs';
-import { connect, ServerGone } from '../autolivery/mcp.mjs';
+import { startUi } from 'liverykit/src/ui/server.mjs';
+import { profileFromKn5 } from 'liverykit/src/engine/profilegen.mjs';
+import { carKn5, vert, CAR } from 'liverykit/test/fixtures/kn5.mjs';
+import { connect, ServerGone } from '../mcp.mjs';
 import { existsSync } from 'node:fs';
-import { createTrace } from '../autolivery/trace.mjs';
-import { run } from '../autolivery/loop.mjs';
-import { piecesInView } from '../src/engine/shot.mjs';
-import { createPlanner } from '../autolivery/claude.mjs';
-import * as local from '../autolivery/openai.mjs';
-import { PLANNER_SYSTEM, plannerSystem } from '../autolivery/prompts.mjs';
-import { fitment } from '../src/fitment.mjs';
-import { createToolHandler } from '../src/mcp/tools.mjs';
-import '../src/index.mjs';
+import { createTrace } from '../trace.mjs';
+import { run } from '../loop.mjs';
+import { piecesInView } from 'liverykit/src/engine/shot.mjs';
+import { createPlanner } from '../claude.mjs';
+import * as local from '../openai.mjs';
+import { PLANNER_SYSTEM, plannerSystem } from '../prompts.mjs';
+import { fitment } from 'liverykit/src/fitment.mjs';
+import { createToolHandler } from 'liverykit/src/mcp/tools.mjs';
+import 'liverykit';
 
 const ROOT = process.cwd();
+const LIVERYKIT_BIN = fileURLToPath(new URL('bin/liverykit.mjs', import.meta.resolve('liverykit/package.json')));
 
 // The whole loop, with no model in it: a real editor on the synthetic car, the
 // real `liverykit --mcp` as a subprocess, and a planner and critic that are
@@ -45,7 +47,7 @@ async function fixtureEditor({ kn5 = {}, tweak = null } = {}) {
     liveryId: 'blank', liveryPath: join(dir, 'blank.json'),
     port: 0, log: () => {},
   });
-  const mcp = await connect({ args: [join(ROOT, 'bin/liverykit.mjs'), '--mcp', '--editor', url] });
+  const mcp = await connect({ args: [LIVERYKIT_BIN, '--mcp', '--editor', url] });
   const closeEditor = async () => {
     if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
     await new Promise((ok) => server.close(ok));
@@ -62,7 +64,7 @@ async function fixtureEditor({ kn5 = {}, tweak = null } = {}) {
 
 const get = async (url, path) => (await fetch(new URL(path, url).href)).json();
 const cli = (script, ...args) => new Promise((ok) => execFile(process.execPath,
-  [join(ROOT, 'autolivery', script), ...args], (e, stdout, stderr) => ok({ code: e?.code ?? 0, stdout, stderr })));
+  [join(ROOT, script), ...args], (e, stdout, stderr) => ok({ code: e?.code ?? 0, stdout, stderr })));
 
 test('the planner is told to take the number group from find_space\'s layout, which the tool offers', async () => {
   // It was told a recipe to draw inside the largest rectangle of one
@@ -84,7 +86,7 @@ test('the critic is told a stripe the check measured whole, and only the top of 
   // the top view showed it across the wing and the check had measured it
   // there. The planner spent a paid round painting the end plates and the
   // whole deck orange to answer it.
-  const { measuredNote } = await import('../autolivery/prompts.mjs');
+  const { measuredNote } = await import('../prompts.mjs');
   const note = measuredNote([], [{ name: 'centre', clean: true }, { name: 'side', clean: false }]);
   assert.match(note, /stripe "centre": its pieces were measured on the car and run nose to tail, and over the top of the rear wing/);
   assert.match(note, /Only the top of the wing is the stripe: its end plates, supports and underside are not/);
@@ -98,7 +100,7 @@ test('a stripe the check could not measure is not vouched for to the critic', as
   // so a check that could not look at the coverage or a join cannot say so;
   // one that could not tell which way a piece runs says nothing about that,
   // and the RSS4's diagonal cockpit panels would keep every stripe unvouched.
-  const { stripesOf } = await import('../autolivery/loop.mjs');
+  const { stripesOf } = await import('../loop.mjs');
   const design = { surfaces: { body: { regions: [{ id: 'a', constraints: { stripe: 'centre' } }] } } };
   const f = (kind, severity, extra = {}) => ({ kind, severity, stripe: 'centre', ...extra });
   assert.deepEqual(stripesOf(design, []), [{ name: 'centre', clean: true }]);
@@ -400,7 +402,7 @@ test('every round lands on the attempts page as it is judged, and the page stops
 });
 
 test('a replay judges a recorded polish round even when today\'s critic gives the pass no advice', async () => {
-  const { createReplayPlanner } = await import('../autolivery/replay.mjs');
+  const { createReplayPlanner } = await import('../replay.mjs');
   const ed = await fixtureEditor();
   try {
     const { panels } = JSON.parse((await ed.mcp.callTool('find_panels', { tag: 'left' })).content[0].text);
@@ -451,7 +453,7 @@ test('a replay judges a recorded polish round even when today\'s critic gives th
 });
 
 test('the attempts page reloads until the run ends, and a run that dies says so on it', async () => {
-  const { attemptsPage } = await import('../autolivery/attempts.mjs');
+  const { attemptsPage } = await import('../attempts.mjs');
   // Passed, and not finished: a polish round or the proposal is still coming.
   const between = attemptsPage({ brief: 'b', passed: true, passedIn: 1, finished: false,
     history: [{ round: 1, passed: true, gates: { render: 'pass', fitment: 'pass', critic: 'pass' } }] });
@@ -506,7 +508,7 @@ test('both planners are told to polish, not to fix, in a polish round', async ()
 });
 
 test('the attempts page says how a run ended, whichever way it ended', async () => {
-  const { attemptsPage } = await import('../autolivery/attempts.mjs');
+  const { attemptsPage } = await import('../attempts.mjs');
   const pass = { round: 1, passed: true, gates: { render: 'pass', fitment: 'pass', critic: 'pass' } };
 
   // Passed and still going promises nothing: a polish round follows a pass
@@ -1619,7 +1621,7 @@ test('an empty list of views is refused before anything starts', async () => {
     delete env.ANTHROPIC_API_KEY;
     delete env.AGENTOPS_API_KEY;
     // A local backend on a port nothing listens on: whatever happens, nothing is paid for.
-    const r = spawnSync(process.execPath, [join(ROOT, 'autolivery/bin.mjs'), 'number 85', '--views', ' , ',
+    const r = spawnSync(process.execPath, [join(ROOT, 'bin.mjs'), 'number 85', '--views', ' , ',
       '--backend', 'openai', '--base-url', 'http://127.0.0.1:1/v1', '--out', out], { env, encoding: 'utf8', timeout: 30000 });
     assert.equal(r.status, 1, r.stdout + r.stderr);
     assert.match(r.stderr, /--views names no view/);
@@ -1763,7 +1765,7 @@ test('a local critic cut off by its token limit says so, and names the limit', a
     assert.equal(sent[1].max_tokens, 20000);
 
     const { spawnSync } = await import('node:child_process');
-    const r = spawnSync(process.execPath, [join(ROOT, 'autolivery/bin.mjs'), 'number 85', '--critic-max-tokens', 'lots',
+    const r = spawnSync(process.execPath, [join(ROOT, 'bin.mjs'), 'number 85', '--critic-max-tokens', 'lots',
       '--backend', 'openai', '--base-url', 'http://127.0.0.1:1/v1', '--out', dir], { encoding: 'utf8', timeout: 30000 });
     assert.equal(r.status, 1, r.stdout + r.stderr);
     assert.match(r.stderr, /--critic-max-tokens must be a whole number above zero, not lots/);
@@ -1886,7 +1888,7 @@ test('find_space returns measured spots on a panel, and refuses a panel that is 
 test('a run can be replayed round by round against today\'s gate, with no planner model at all', async () => {
   // Most changes are to the harness, and each was being tested by paying a
   // model to design a livery again. The designs already exist.
-  const { loadRecording, createReplayPlanner } = await import('../autolivery/replay.mjs');
+  const { loadRecording, createReplayPlanner } = await import('../replay.mjs');
   const ed = await fixtureEditor();
   try {
     const drafting = {
@@ -1964,7 +1966,7 @@ test('a run can be replayed round by round against today\'s gate, with no planne
 
     // --rounds under --replay was dropped without a word.
     const bin = (...args) => new Promise((ok) => execFile(process.execPath,
-      [join(ROOT, 'autolivery/bin.mjs'), ...args], (e, stdout, stderr) => ok({ code: e?.code ?? 0, stdout, stderr })));
+      [join(ROOT, 'bin.mjs'), ...args], (e, stdout, stderr) => ok({ code: e?.code ?? 0, stdout, stderr })));
     const rounds = await bin('--replay', join(ed.dir, 'original'), '--rounds', '2');
     assert.equal(rounds.code, 1);
     assert.match(rounds.stderr, /--rounds does not apply to --replay, which runs the 1 round\(s\) the run recorded/);
@@ -2040,7 +2042,7 @@ test('a region is whole when every piece of it is, and a high finding on a piece
   // `against` kept a finding's piece id, `band@left_mid`, while the gate's
   // other half goes by the region's, so a high finding on a span piece did not
   // stop `band` from being overruled as whole.
-  const { wholeFor } = await import('../autolivery/loop.mjs');
+  const { wholeFor } = await import('../loop.mjs');
   const measured = [
     { id: 'band@left_mid', whole: true }, { id: 'band@left_rear', whole: true },
     { id: 'name@left_mid', whole: true }, { id: 'name@left_rear', whole: false },
@@ -2093,7 +2095,7 @@ test('a replay is held to the fit its run began from, and an older record says i
   // The fingerprint covered the design alone, so an editor opened with another
   // --fit took the recorded draft_fit operations onto a different fit and the
   // replay passed its own check.
-  const { designDigest, checkBase } = await import('../autolivery/replay.mjs');
+  const { designDigest, checkBase } = await import('../replay.mjs');
   const ed = await fixtureEditor();
   try {
     const before = await designDigest(ed.mcp);
@@ -2161,7 +2163,7 @@ test('the critic\'s evaluator fails when it judged nothing, and says why a pictu
     const bad = await go();
     assert.equal(bad.code, 1);
     assert.match(bad.stderr, /case bad-pattern: notCutOff pattern "roundel\(" is not a regular expression/);
-    const { checkPatterns } = await import('../autolivery/cases.mjs');
+    const { checkPatterns } = await import('../cases.mjs');
     assert.throws(() => checkPatterns([{ id: 'loose', expect: { present: 'stripe' } }]), /case loose: present must be a list of patterns/);
     assert.doesNotThrow(() => checkPatterns([{ id: 'fine', expect: { present: ['stripe|band'], passes: true } }]));
   } finally {
@@ -2170,7 +2172,7 @@ test('the critic\'s evaluator fails when it judged nothing, and says why a pictu
 });
 
 test('a critic\'s verdict is scored against what a person said about the same picture', async () => {
-  const { score } = await import('../autolivery/cases.mjs');
+  const { score } = await import('../cases.mjs');
   const verdict = (over = {}) => ({ reads_at_distance: true, number_legible: true, palette_ok: true, matches_brief: true,
     requirements: [{ asked: 'Gulf orange centre stripe', present: true, where: 'top' }, { asked: 'Neon Doll Racing', present: true, where: 'doors' }],
     cut_off: [], unreadable: [], notes: [], ...over });
@@ -2537,7 +2539,7 @@ test('a piece that runs off its island is not whole, and a critic calling it cut
     const told = h.fitment.inView.find((m) => m.id === 'ring-off');
     assert.equal(told.onMesh, ring.onMesh, 'the round record says why it is not whole');
     assert.match(told.why, /texture space no triangle uses/);
-    const { measuredNote } = await import('../autolivery/prompts.mjs');
+    const { measuredNote } = await import('../prompts.mjs');
     assert.match(measuredNote(asked[0].measured), /ring-off: .*Not whole: only \d+% of it is on the car/);
   } finally {
     await ed.stop();
@@ -2548,7 +2550,7 @@ test('eval overrules a critic only where the gate would', async () => {
   // eval overruled every "cut off" the count called whole, while the gate
   // does not for a piece a high finding names or one counted in a view the
   // critic was not shown, so eval scored a verdict the gate never gives.
-  const { overruleCase } = await import('../autolivery/cases.mjs');
+  const { overruleCase } = await import('../cases.mjs');
   const measured = [
     { id: 'clear', home: 'left', whole: true },
     { id: 'faulted', home: 'left', whole: true },

@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
-    "liverykit": "github:mishan/liverykit#83064ed724aec79bcaed45b95705ca32091f5ca6"
+    "liverykit": "github:mishan/liverykit#a036c15c848e57e07c7ddec3ceca5413d726c652"
   },
   "scripts": {
     "test": "node --test --test-concurrency=1 test/*.test.mjs"

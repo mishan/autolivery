@@ -2281,7 +2281,8 @@ test('a piece is judged in every view that shows it nearly as large as its home 
   // called it cut off on the right door would have been overruled.
   const ed = await fixtureEditor({ kn5: { extraMeshes: [MIRRORED, SHIELD_R] } });
   try {
-    const { panels } = JSON.parse((await ed.mcp.callTool('find_panels', { tag: 'left' })).content[0].text);
+    // The texels are on both flanks, so the panel claims no side.
+    const { panels } = JSON.parse((await ed.mcp.callTool('find_panels', { tag: 'shared' })).content[0].text);
     const out = JSON.parse((await ed.mcp.callTool('check_fitment', { proposal: { design: [
       { op: 'set-palette', name: 'ink', value: '#101014' },
       plate('plate-mirrored', panels[0].panel, [0.5, 0.3, 0.3, 0.4]),
